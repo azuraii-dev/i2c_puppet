@@ -54,6 +54,11 @@ static void key_cb(char key, enum key_state state)
 		(key == KEY_MOD_SYM))
 		return;
 
+	// Try to acquire mutex - if we can't, skip USB report to avoid race condition
+	// Key events are still captured in FIFO for I2C access
+	if (!mutex_try_enter(&self.mutex, NULL))
+		return;
+
 	if (tud_hid_n_ready(USB_ITF_KEYBOARD) && reg_is_bit_set(REG_ID_CF2, CF2_USB_KEYB_ON)) {
 		uint8_t conv_table[128][2]		= { HID_ASCII_TO_KEYCODE };
 		conv_table['\n'][1]				= HID_KEY_ENTER; // Fixup: Enter instead of Return
@@ -91,17 +96,26 @@ static void key_cb(char key, enum key_state state)
 			}
 		}
 	}
+
+	mutex_exit(&self.mutex);
 }
 static struct key_callback key_callback = { .func = key_cb };
 
 static void touch_cb(int8_t x, int8_t y)
 {
-	if (!tud_hid_n_ready(USB_ITF_MOUSE) || !reg_is_bit_set(REG_ID_CF2, CF2_USB_MOUSE_ON))
+	if (!reg_is_bit_set(REG_ID_CF2, CF2_USB_MOUSE_ON))
 		return;
 
-	self.mouse_moved = true;
+	// Try to acquire mutex - if we can't, skip USB report to avoid race condition
+	if (!mutex_try_enter(&self.mutex, NULL))
+		return;
 
-	tud_hid_n_mouse_report(USB_ITF_MOUSE, 0, self.mouse_btn, x, y, 0, 0);
+	if (tud_hid_n_ready(USB_ITF_MOUSE)) {
+		self.mouse_moved = true;
+		tud_hid_n_mouse_report(USB_ITF_MOUSE, 0, self.mouse_btn, x, y, 0, 0);
+	}
+
+	mutex_exit(&self.mutex);
 }
 static struct touch_callback touch_callback = { .func = touch_cb };
 
