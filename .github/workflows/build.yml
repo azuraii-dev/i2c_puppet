@@ -19,13 +19,13 @@ jobs:
           release: "10-2020-q4"
 
       - name: Clone repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           ref: ${{ github.event.client_payload.branch }}
 
       - name: Get short sha1
         id: short_sha1
-        run: echo "::set-output name=value::$(git rev-parse --short HEAD)"
+        run: echo "value=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
       - name: Build
         run: |
@@ -39,7 +39,7 @@ jobs:
           cp app/i2c_puppet.{bin,elf,uf2} ../output
 
       - name: Upload package artifact
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v4
         with:
           path: output
           name: i2c_puppet-bbq20kbd_breakout-${{ steps.short_sha1.outputs.value }}
