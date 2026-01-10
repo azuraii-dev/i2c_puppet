@@ -68,13 +68,13 @@ static struct
 
 	struct list_item list[LIST_SIZE];
 
-	volatile bool mods[KEY_MOD_ID_LAST];
+	bool mods[KEY_MOD_ID_LAST];
 
-	volatile bool capslock_changed;
-	volatile bool capslock;
+	bool capslock_changed;
+	bool capslock;
 
-	volatile bool numlock_changed;
-	volatile bool numlock;
+	bool numlock_changed;
+	bool numlock;
 } self;
 
 static void transition_to(struct list_item * const p_item, const enum key_state next_state)

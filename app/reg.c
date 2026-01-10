@@ -9,7 +9,6 @@
 #include "touchpad.h"
 
 #include <pico/stdlib.h>
-#include <hardware/sync.h>
 #include <RP2040.h> // TODO: When there's more than one RP chip, change this to be more generic
 #include <stdio.h>
 
@@ -18,22 +17,17 @@
 
 static struct
 {
-	volatile uint8_t regs[REG_ID_LAST];
+	uint8_t regs[REG_ID_LAST];
 } self;
 
 static void touch_cb(int8_t x, int8_t y)
 {
-	// Protect read-modify-write of touch delta registers
-	const uint32_t irq_state = save_and_disable_interrupts();
-
 	const int16_t dx = (int8_t)self.regs[REG_ID_TOX] + x;
 	const int16_t dy = (int8_t)self.regs[REG_ID_TOY] + y;
 
 	// bind to -128 to 127
 	self.regs[REG_ID_TOX] = MAX(INT8_MIN, MIN(dx, INT8_MAX));
 	self.regs[REG_ID_TOY] = MAX(INT8_MIN, MIN(dy, INT8_MAX));
-
-	restore_interrupts(irq_state);
 }
 static struct touch_callback touch_callback = { .func = touch_cb };
 
@@ -173,7 +167,6 @@ void reg_set_value(enum reg_id reg, uint8_t value)
 
 bool reg_is_bit_set(enum reg_id reg, uint8_t bit)
 {
-	// Single byte read is atomic, no critical section needed
 	return self.regs[reg] & bit;
 }
 
@@ -183,10 +176,7 @@ void reg_set_bit(enum reg_id reg, uint8_t bit)
 	printf("%s: reg: 0x%02X, bit: %d\r\n", __func__, reg, bit);
 #endif
 
-	// Protect read-modify-write operation from concurrent access
-	const uint32_t irq_state = save_and_disable_interrupts();
 	self.regs[reg] |= bit;
-	restore_interrupts(irq_state);
 }
 
 void reg_clear_bit(enum reg_id reg, uint8_t bit)
@@ -195,10 +185,7 @@ void reg_clear_bit(enum reg_id reg, uint8_t bit)
 	printf("%s: reg: 0x%02X, bit: %d\r\n", __func__, reg, bit);
 #endif
 
-	// Protect read-modify-write operation from concurrent access
-	const uint32_t irq_state = save_and_disable_interrupts();
 	self.regs[reg] &= ~bit;
-	restore_interrupts(irq_state);
 }
 
 void reg_init(void)
