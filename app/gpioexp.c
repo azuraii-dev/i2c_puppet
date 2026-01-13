@@ -268,6 +268,13 @@ void gpioexp_add_int_callback(struct gpioexp_callback *callback)
 
 void gpioexp_init(void)
 {
-	// Configure all to inputs
-	gpioexp_update_dir(0xFF);
+	// Configure all GPIOs to inputs with correct pull settings
+	// This forces hardware reconfiguration, clearing any state from previous firmware
+	// that may persist across soft resets (e.g., when flashing via USB)
+	// REG_ID_DIR starts at 0x00 (zero-initialized), so this will reconfigure all pins
+	gpioexp_update_dir(0xFF);  // All GPIOs as inputs
+	
+	// Explicitly configure pull resistors to default state
+	// REG_ID_PUE and REG_ID_PUD are set in reg_init(), but we need to apply them to hardware
+	gpioexp_update_pue_pud(reg_get_value(REG_ID_PUE), reg_get_value(REG_ID_PUD));
 }

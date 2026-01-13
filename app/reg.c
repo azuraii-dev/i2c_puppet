@@ -195,7 +195,9 @@ void reg_init(void)
 	reg_set_value(REG_ID_DEB, 10);
 	reg_set_value(REG_ID_FRQ, 10);	// ms
 	reg_set_value(REG_ID_BK2, 255);
-	reg_set_value(REG_ID_PUD, 0xFF);
+	// Note: REG_ID_DIR is intentionally not set here - gpioexp_init() handles GPIO initialization
+	reg_set_value(REG_ID_PUE, 0x00);	// all pulls disabled (default)
+	reg_set_value(REG_ID_PUD, 0xFF);	// all pulls set to pull-up (if enabled)
 	reg_set_value(REG_ID_HLD, 30);	// 10ms units
 	reg_set_value(REG_ID_ADR, 0x1F);
 	reg_set_value(REG_ID_IND, 1);	// ms
