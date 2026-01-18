@@ -197,16 +197,24 @@ static void next_item_state(struct list_item * const p_item, const bool pressed)
 				transition_to(p_item, KEY_STATE_RELEASED);
 			break;
 
-		case KEY_STATE_RELEASED:
-		{
+	case KEY_STATE_RELEASED:
+	{
+		if (pressed) {
+			// Key pressed again before fully released, continue as new press
+			p_item->effective_key = '\0';
+			p_item->hold_start_time = to_ms_since_boot(get_absolute_time());
+			transition_to(p_item, KEY_STATE_PRESSED);
+		} else {
+			// Key fully released, clear entry
 			if (p_item->p_entry->mod != KEY_MOD_ID_NONE)
 				self.mods[p_item->p_entry->mod] = false;
 
 			p_item->p_entry = NULL;
 			p_item->effective_key = '\0';
 			transition_to(p_item, KEY_STATE_IDLE);
-			break;
 		}
+		break;
+	}
 	}
 }
 
