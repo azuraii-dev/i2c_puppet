@@ -30,8 +30,9 @@
 #define BIT_OBSERV_REST3	(3 << 6)
 
 #define SWIPE_COOLDOWN_TIME_MS	100 // time to wait before generating a new swipe event
-#define SWIPE_RELEASE_DELAY_MS	10  // time to wait before sending key release event
 #define MOTION_IS_SWIPE(i, j)	(((i >= 15) || (i <= -15)) && ((j >= -5) && (j <= 5)))
+
+#define I2C_TIMEOUT_US			5000 // 5ms timeout for touchpad I2C operations
 
 static i2c_inst_t *i2c_instances[2] = { i2c0, i2c1 };
 
@@ -42,20 +43,22 @@ static struct
 	i2c_inst_t *i2c;
 } self;
 
-static uint8_t read_register8(uint8_t reg)
+static int read_register8(uint8_t reg, uint8_t *val)
 {
-	uint8_t val;
+	int ret;
 
-	i2c_write_blocking(self.i2c, DEV_ADDR, &reg, sizeof(reg), true);
-	i2c_read_blocking(self.i2c, DEV_ADDR, &val, sizeof(val), false);
+	ret = i2c_write_timeout_us(self.i2c, DEV_ADDR, &reg, sizeof(reg), true, I2C_TIMEOUT_US);
+	if (ret < 0)
+		return ret;
 
-	return val;
+	ret = i2c_read_timeout_us(self.i2c, DEV_ADDR, val, sizeof(*val), false, I2C_TIMEOUT_US);
+	return ret;
 }
 
 //static void write_register8(uint8_t reg, uint8_t val)
 //{
 //	uint8_t buffer[2] = { reg, val };
-//	i2c_write_blocking(self.i2c, DEV_ADDR, buffer, sizeof(buffer), false);
+//	i2c_write_timeout_us(self.i2c, DEV_ADDR, buffer, sizeof(buffer), false, I2C_TIMEOUT_US);
 //}
 
 int64_t release_key(alarm_id_t id, void *user_data)
@@ -77,13 +80,19 @@ void touchpad_gpio_irq(uint gpio, uint32_t events)
 	if (!(events & GPIO_IRQ_EDGE_FALL))
 		return;
 
-	const uint8_t motion = read_register8(REG_MOTION);
-	if (motion & BIT_MOTION_MOT) {
-		int8_t x = read_register8(REG_DELTA_X);
-		int8_t y = read_register8(REG_DELTA_Y);
+	uint8_t motion;
+	if (read_register8(REG_MOTION, &motion) < 0)
+		return;
 
-		x = ((x < 127) ? x : (x - 256)) * -1;
-		y = ((y < 127) ? y : (y - 256));
+	if (motion & BIT_MOTION_MOT) {
+		uint8_t raw_x, raw_y;
+		if (read_register8(REG_DELTA_X, &raw_x) < 0)
+			return;
+		if (read_register8(REG_DELTA_Y, &raw_y) < 0)
+			return;
+
+		int8_t x = ((raw_x < 127) ? raw_x : (raw_x - 256)) * -1;
+		int8_t y = ((raw_y < 127) ? raw_y : (raw_y - 256));
 
 		if (keyboard_is_mod_on(KEY_MOD_ID_ALT)) {
 			if (to_ms_since_boot(get_absolute_time()) - self.last_swipe_time > SWIPE_COOLDOWN_TIME_MS) {
@@ -97,8 +106,10 @@ void touchpad_gpio_irq(uint gpio, uint32_t events)
 				if (key != '\0') {
 					keyboard_inject_event(key, KEY_STATE_PRESSED);
 
-					// we need to allow the usb a bit of time to send the press, so schedule the release after a bit
-					add_alarm_in_ms(SWIPE_RELEASE_DELAY_MS, release_key, (void*)(int)key, true);
+					// Small delay to allow USB to process the press before sending release
+					busy_wait_us(500);
+
+					keyboard_inject_event(key, KEY_STATE_RELEASED);
 
 					self.last_swipe_time = to_ms_since_boot(get_absolute_time());
 				}
