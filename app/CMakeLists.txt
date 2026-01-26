@@ -13,6 +13,12 @@ add_executable(i2c_puppet
 	usb_descriptors.c
 )
 
+option(BACKLIGHT_INVERT "Invert backlight control logic" OFF)
+
+if(BACKLIGHT_INVERT)
+	target_compile_definitions(i2c_puppet PRIVATE BACKLIGHT_INVERT)
+endif()
+
 add_compile_options(-Wall -Wextra -Wpedantic)
 
 target_include_directories(i2c_puppet PRIVATE ${CMAKE_CURRENT_LIST_DIR})
