@@ -4,10 +4,18 @@ on: [push, pull_request, workflow_dispatch]
 
 jobs:
   build:
-    name: Building
+    name: Build ${{ matrix.variant }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
+      matrix:
+        include:
+          - variant: normal
+            cmake_flags: ""
+            artifact_suffix: ""
+          - variant: backlight-inverted
+            cmake_flags: "-DBACKLIGHT_INVERT=ON"
+            artifact_suffix: "-backlight-inverted"
 
     steps:
       - name: Setup cmake
@@ -34,7 +42,7 @@ jobs:
           cd 3rdparty/pico-sdk
           git submodule update --init
           cd ../../build
-          cmake -DPICO_BOARD=bbq20kbd_breakout -DCMAKE_BUILD_TYPE=Debug ..
+          cmake -DPICO_BOARD=bbq20kbd_breakout -DCMAKE_BUILD_TYPE=Debug ${{ matrix.cmake_flags }} ..
           make
           cp app/i2c_puppet.{bin,elf,uf2} ../output
 
@@ -42,4 +50,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           path: output
-          name: i2c_puppet-bbq20kbd_breakout-${{ steps.short_sha1.outputs.value }}
+          name: i2c_puppet-bbq20kbd_breakout${{ matrix.artifact_suffix }}-${{ steps.short_sha1.outputs.value }}
