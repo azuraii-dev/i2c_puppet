@@ -191,10 +191,10 @@ void reg_clear_bit(enum reg_id reg, uint8_t bit)
 void reg_init(void)
 {
 	reg_set_value(REG_ID_CFG, CFG_OVERFLOW_INT | CFG_KEY_INT | CFG_USE_MODS);
-	reg_set_value(REG_ID_BKL, 0); //testing with default value being off (0)
+	reg_set_value(REG_ID_BKL, 255);
 	reg_set_value(REG_ID_DEB, 10);
 	reg_set_value(REG_ID_FRQ, 10);	// ms
-	reg_set_value(REG_ID_BK2, 0);
+	reg_set_value(REG_ID_BK2, 255);
 	// Note: REG_ID_DIR is intentionally not set here - gpioexp_init() handles GPIO initialization
 	reg_set_value(REG_ID_PUE, 0x00);	// all pulls disabled (default)
 	reg_set_value(REG_ID_PUD, 0xFF);	// all pulls set to pull-up (if enabled)
