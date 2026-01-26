@@ -6,8 +6,8 @@
 
 void backlight_sync(void)
 {
-	//pwm_set_gpio_level(PIN_BKL, reg_get_value(REG_ID_BKL)  * 0x80);
-	pwm_set_gpio_level(PIN_BKL, 0); //testing with default value being off (0)
+	uint8_t inverted = 255 - reg_get_value(REG_ID_BKL);
+	pwm_set_gpio_level(PIN_BKL, inverted * 0x80);
 }
 
 void backlight_init(void)
